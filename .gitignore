@@ -1,0 +1,6 @@
+*.typ
+project_proposal.pdf
+project_proposal.out.pdf
+.RData
+.vscode
+.Rproj.user

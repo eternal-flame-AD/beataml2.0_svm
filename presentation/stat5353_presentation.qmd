@@ -1,0 +1,301 @@
+---
+title: "Predicting Survival in AML Patients from RNASeq Data using SVM"
+author: "[redacted]"
+format: 
+    revealjs:
+      theme: moon
+      embed-resources: true
+bibliography: ../project_proposal.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(colorspace)
+
+read_tsv <- function(file, ...) {
+  read_delim(file, ..., delim = "\t")
+}
+
+ggplot_my_theme = theme(
+  axis.text = element_text(size = 20),
+  axis.title = element_text(size = 20),
+  legend.text = element_text(size = 10),
+  legend.title = element_text(size = 15),
+)
+```
+
+## Introduction
+
+### Acute Myeloid Leukemia (AML)
+
+::: {.incremental}
+- A cancer of the blood and bone marrow that affects the myeloid cells.
+- Usually very aggressive with limited therapeutic options.
+- Only ~20% patients can achive durable remission. [@pulte_survival_2016]
+- Prognosis is usually determined by cytogenetic and molecular markers. They are important factors in determining the appropriate treatment plan.
+:::
+
+## Dataset & Objectives
+
+As part of the Beat AML 2.0 program, a dataset consisting of clinical outcomes, genomic and transcriptomic data from a cohort of 805 AML patients were collected. [@bottomly_integrative_2022]
+
+Among which 571 patients have both RNASeq data and either survived for at least one year after diagnosis (n = 311) or have died (n = 260). We propose a methodology to predict the one-year survival of AML patients using a support vector machine (SVM) model based on transcriptomic (RNASeq) data of these patients.
+
+
+::: {.notes}
+Mention that we have more then 50k gene features in this data set.
+:::
+
+
+## Methodology {.smaller}
+
+### Data Preprocessing and Normalization
+
+- The raw read count data was normalized into z-scores across the features.
+- The data was then split into training and testing sets with a 80/20 ratio.
+- RNAseq data was then joined with the clinical data to form the final dataset.
+
+```{r}
+#| cache: TRUE
+svm_input_subset <- read_csv("../svm_data/svm_input_nona.csv")
+
+print(svm_input_subset)
+```
+
+## Methodology {.smaller}
+
+### Feature Selection
+
+::: {.incremental}
+- We used the Boruta algorithm [@kursa_feature_2010] to select the most important features.
+- A brief explanation of the Boruta algorithm:
+  - It first creates shadow features by randomly permuting the original features.
+  - It then fits a random forest model using both the original and shadow features.
+  - If a feature scored a higher Z-score than the shadow features, it is considered important.
+  - If a feature repeatedly scored similar to the shadow features, it is considered unimportant and removed from further iterations.
+  - The algorithm iteratively removes the unimportant features until all features are either important or unimportant.
+- We ran the Boruta algorithm for 1000 iterations and reduced 51016 => 60 important features.
+:::
+
+## Methodology {.smaller}
+
+### Model Evaluation
+
+::: {.incremental}
+- 80/20 split for training and testing.
+- We care about all 4 quadrants of the confusion matrix!
+- Matthews Correlation Coefficient (MCC) as the primary metric to evaluate the performance of the SVM model.
+- $$
+  \text{MCC} = \frac{TP \times TN - FP \times FN}{\sqrt{(TP + FP)(TP + FN)(TN + FP)(TN + FN)}}
+  $$
+- We also used the ROC curve to visualize some of the results.
+- Ranges from -1 to 1, where 1 is a perfect prediction, 0 is a random prediction, and -1 is a perfect inverse prediction.
+:::
+
+## Methodology {.smaller}
+
+### SVM - First Try
+
+:::: {.columns}
+::: {.column width=60%}
+- Short introduction to SVM:
+  - A supervised machine learning algorithm that can be used for classification or regression tasks.
+  - It finds the hyperplane that best separates the data into different classes.
+  - It can be used for both linear and non-linear classification tasks using the kernel trick.
+- We fit a default SVM model using the linear kernel and either the whole dataset or the 60 important features.
+:::
+::: {.column width=40%}
+```{r, fig.width=7, fig.height=7}
+#| fig-cap: ROC Curve for bare-bones SVM
+
+svm_rocs <- read_csv("../svm_data/svm_grid_opt_roc.csv")
+svm_boruta_roc <- read_csv("../svm_data/svm_stats_roc.csv")
+
+bind_rows(
+    svm_rocs %>%
+      filter(c_pos == 10 & c_neg == 10) %>%
+      mutate(`Feature Selection` = FALSE),
+    svm_boruta_roc %>%
+      filter(dropped == "NONE") %>%
+      mutate(`Feature Selection` = TRUE)
+    ) %>%
+  ggplot(aes(x=x,y=y, color=`Feature Selection`)) +
+  geom_line() + 
+  coord_fixed() +
+  labs(x = "FP%", y="TP%") +
+  ggplot_my_theme
+```
+:::
+::::
+
+## Methodology {.smaller}
+
+### SVM - Non-linear Models
+
+:::: {.columns}
+::: {.column width=60%}
+We used two non-linear SVM models:
+
+- The gaussian kernel:
+  $$
+  K(x, x') = \exp\left(-\frac{\|x - x'\|^2}{\epsilon}\right)
+  $$
+
+- The polynomial kernel.
+
+  $$
+  K(x, x') = (<x, x'> + C)^d
+  $$
+:::
+
+::: {.column width=40%}
+```{r, fig.width=7, fig.height=7}
+#| fig-cap: MCC performance for different kernels
+svm_boruta_grid_opt <- read_csv("../svm_data/svm_grid_opt_boruta.csv") %>% 
+  filter(!is.na(mcc))
+
+svm_boruta_grid_opt %>%
+  ggplot(aes(x = kernel, y = mcc)) +
+  geom_boxplot() +
+  ggplot_my_theme
+```
+:::
+::::
+
+::: {.notes}
+It seems that the gaussian kernel is the best choice for this dataset.
+:::
+
+## Methodology {.smaller}
+
+### SVM - Hyperparameter Tuning
+
+:::: {.columns}
+::: {.column width=60%}
+$$
+K(x, x') = \exp\left(-\frac{\|x - x'\|^2}{\epsilon}\right)
+$$
+
+In addition to the $\epsilon$ value for the gaussian kernel, we also need to tune the $c$ value for the SVM algorithm.
+
+- A low $c$ value allows for a wider margin but more misclassification.
+- A high $c$ value allows for a narrower margin but less misclassification.
+:::
+
+::: {.column width=40%}
+
+::: {.r-stack}
+
+::: {.fragment .fade-out}
+```{r, fig.width=7, fig.height=7}
+#| fig-cap: The Gaussian Kernel
+
+expand.grid(
+  x = seq(-10, 10, by = 0.1),
+  eps = c(100, 200, 300, 400, 500)
+) %>%
+  mutate(y = exp(-x^2/eps)) %>%
+  ggplot() +
+  geom_line(aes(x = x, y = y, color = as.factor(eps)), size = 2) +
+  labs(x = "x", y = "K") +
+  ggplot_my_theme +
+  labs(color = "Epsilon")
+
+```
+:::
+
+::: {.fragment}
+```{r, fig.width=7, fig.height=7}
+#| fig-cap: MCC performance for different hyperparameters
+
+svm_boruta_grid_opt_gaussian <- read_csv("../svm_data/svm_grid_opt_boruta_gaussian.csv") %>% 
+  filter(!is.na(mcc))
+
+svm_boruta_grid_opt_gaussian %>%
+  filter(kernel == "gaussian") %>%
+  filter(c_pos == c_neg) %>%
+  ggplot(aes(x=as.factor(c_pos), y=gaussian_eps, color = mcc)) +
+  geom_point(size = 3) +
+  scale_x_discrete(breaks = c(0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)) +
+  scale_y_log10(limits=c(30,60)) +
+  ggplot_my_theme +
+  #scale_color_gradientn(colors = rainbow_hcl(10)) +
+  scale_color_continuous_sequential(palette = "Viridis", rev = FALSE) +
+  labs(x = "c Value", y = "Epsilon", color = "MCC")
+```
+:::
+:::
+
+:::
+::::
+
+## Results {.smaller}
+
+### SVM - Variable Importance
+
+- We used a technique called permutation importance to determine the importance of each feature in the SVM model.
+
+```{r}
+svm_importance_boruta <- read_csv("../svm_data/svm_importance_boruta.csv")
+
+beataml_genes <- read_tsv("../beataml2.0_data/beataml_waves1to4_counts_dbgap.txt") %>%
+  select(stable_id, display_label, description, biotype)
+
+svm_importance_boruta %>%
+  select(feature, delta_mcc) %>%
+  left_join(beataml_genes, by = c("feature" = "stable_id")) %>%
+  arrange(delta_mcc) %>%
+  print(n = 5)
+```
+
+- TBKBP1, part of a growth factor signaling axis, already proposed by existing literature as potential tumor growth mediator. [@zhu_tbkbp1_2019]
+- SLC16A1-AS1, multiple research shows it regulates cell cycle in oral squamous cell carcinoma [@feng_long_2020], clinical data suggest that it contributes to the progression of hepatocellular carcinoma. [@duan_lncrna_2022]
+- TG, a gene that encodes for thyroglobulin, a precursor of thyroid hormones.
+
+## Results {.smaller}
+
+### SVM - Training the Final Model {.smaller}
+
+:::: {.columns}
+::: {.column width=60%}
+::: {.incremental}
+- We still can do something to improve the model (in terms of increasing the prediction power).
+- We have limited number of samples, so we can conserve them by using a 10-fold cross-validation instead of the 80/20 split we've been using.
+- A predictor that has seen the input has 10% vote in this!
+:::
+:::
+
+::: {.column width=40%}
+
+::: {.fragment .fade-in}
+```{r, fig.width=7, fig.height=7}
+#| fig-cap: ROC curve of the final model
+
+svm_boruta_grid_opt_gaussian_roc <- read_csv("../svm_data/svm_grid_opt_boruta_gaussian_roc.csv")
+svm_kfold_boruta_roc <- read_csv("../svm_data/svm_kfold_boruta_roc.csv")
+
+svm_boruta_grid_opt_gaussian_roc %>%
+  filter(c_pos == 1 & c_neg == 1 & gaussian_eps == 47) %>%
+  select(x, y) %>%
+  mutate(mode = "Train/Test Split") %>%
+  bind_rows(svm_kfold_boruta_roc %>% mutate(mode = "K-Fold")) %>%
+  ggplot(aes(x=x,y=y, color = mode)) +
+  geom_line() + 
+  coord_fixed() +
+  labs(x = "FP%", y="TP%") +
+  ggplot_my_theme +
+  labs(color = "Mode")
+```
+:::
+:::
+::::
+
+
+## License & References
+
+- BeatAML2.0 Data is used under the CC-BY-4.0 license. See reference [@bottomly_integrative_2022].
+- [Linfa](https://github.com/rust-ml/linfa), a Rust machine learning framework, is used under the [MIT](https://github.com/rust-ml/linfa) license. 
+
+::: {#refs}
+:::
