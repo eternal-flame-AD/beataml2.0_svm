@@ -1,0 +1,3 @@
+[submodule "beataml2.0_data"]
+	path = beataml2.0_data
+	url = https://github.com/biodev/beataml2.0_data.git
