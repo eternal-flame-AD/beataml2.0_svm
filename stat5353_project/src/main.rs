@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use ndarray::Array;
 use stat5353_project::{
     kfold, pivot_data,
-    svm::{svm_hyper_params_grid, CombinedSVM, SvmHyperParams, C_OPTIONS},
+    svm::{svm_hyper_params_grid, CombinedSVM, SvmHyperParams},
 };
 
 #[derive(Debug, Parser)]

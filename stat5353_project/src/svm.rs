@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use linfa::prelude::*;
 use linfa_svm::{error::Result, Svm};
 use ndarray::{ArrayBase, Dim, Ix1, OwnedRepr};
@@ -105,10 +106,15 @@ pub enum Kernel<F: Float> {
     Gaussian(F),
     Polynomial(F, F),
 }
-pub const C_OPTIONS: [f64; 23] = [
+/*pub const C_OPTIONS: [f64; 23] = [
     0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0,
     10.0, 50.0, 100.0, 500.0,
-];
+];*/
+
+lazy_static! {
+    static ref C_OPTIONS: Vec<f64> = (-5..=15).map(|x| 2f64.powi(x)).collect::<Vec<f64>>();
+}
+
 pub fn svm_hyper_params_grid<'a, 'b>(
     kernels: &'b [String],
 ) -> impl Iterator<Item = SvmHyperParams<f64>> + 'a

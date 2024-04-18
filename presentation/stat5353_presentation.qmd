@@ -101,9 +101,10 @@ print(svm_input_subset)
 ::: {.column width=60%}
 - Short introduction to SVM:
   - A supervised machine learning algorithm that can be used for classification or regression tasks.
-  - It finds the hyperplane that best separates the data into different classes.
+  - It maps data ot a higher dimension space and finds the hyperplane that best separates the data into different classes.
   - It can be used for both linear and non-linear classification tasks using the kernel trick.
 - We fit a default SVM model using the linear kernel and either the whole dataset or the 60 important features.
+  - Feature selection is effective.
 :::
 ::: {.column width=40%}
 ```{r, fig.width=7, fig.height=7}
@@ -215,9 +216,9 @@ svm_boruta_grid_opt_gaussian <- read_csv("../svm_data/svm_grid_opt_boruta_gaussi
 svm_boruta_grid_opt_gaussian %>%
   filter(kernel == "gaussian") %>%
   filter(c_pos == c_neg) %>%
-  ggplot(aes(x=as.factor(c_pos), y=gaussian_eps, color = mcc)) +
+  ggplot(aes(x=c_pos, y=gaussian_eps, color = mcc)) +
   geom_point(size = 3) +
-  scale_x_discrete(breaks = c(0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)) +
+  scale_x_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2)) +
   scale_y_log10(limits=c(30,60)) +
   ggplot_my_theme +
   #scale_color_gradientn(colors = rainbow_hcl(10)) +
@@ -292,8 +293,9 @@ svm_boruta_grid_opt_gaussian_roc %>%
 ::::
 
 
-## License & References
+## Code Availability, License & References
 
+- The code for reproducing this project is available on [https://github.com/eternal-flame-AD/beataml2.0_svm](https://github.com/eternal-flame-AD/beataml2.0_svm).
 - BeatAML2.0 Data is used under the CC-BY-4.0 license. See reference [@bottomly_integrative_2022].
 - [Linfa](https://github.com/rust-ml/linfa), a Rust machine learning framework, is used under the [MIT](https://github.com/rust-ml/linfa) license. 
 
