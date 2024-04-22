@@ -127,13 +127,15 @@ where
 
             let gaussian_kernels = (10..100).map(move |gamma| Kernel::Gaussian(gamma as f64));
 
-            let polynomial_kernels = vec![0.1, 0.5, 1.0, 5.0, 10.0, 50.0, 100.0]
-                .into_iter()
-                .flat_map(move |gamma| {
-                    vec![1., 2., 3., 4., 5.]
-                        .into_iter()
-                        .map(move |degree| Kernel::Polynomial(gamma, degree))
-                });
+            let polynomial_kernels =
+                (-8..=8)
+                    .map(|x| 2f64.powi(x))
+                    .into_iter()
+                    .flat_map(move |gamma| {
+                        vec![1., 2., 3., 4., 5.]
+                            .into_iter()
+                            .map(move |degree| Kernel::Polynomial(gamma, degree))
+                    });
 
             std::iter::once(linear_kernel)
                 .chain(gaussian_kernels)
@@ -142,8 +144,12 @@ where
                     kernels.is_empty()
                         || match kernel {
                             Kernel::Linear => kernels.contains(&"linear".to_string()),
-                            Kernel::Gaussian(_) => kernels.contains(&"gaussian".to_string()),
-                            Kernel::Polynomial(_, _) => kernels.contains(&"polynomial".to_string()),
+                            Kernel::Gaussian(_) => {
+                                c_neg == c_pos && kernels.contains(&"gaussian".to_string())
+                            }
+                            Kernel::Polynomial(_, _) => {
+                                c_neg == c_pos && kernels.contains(&"polynomial".to_string())
+                            }
                         }
                 })
                 .map(move |kernel| SvmHyperParams {

@@ -1,10 +1,11 @@
 ---
-title: "Predicting Survival in AML Patients from RNASeq Data using SVM"
+title: "Transcription to Prediction"
+subtitle: "Predicting Survival in AML Patients from RNASeq Data using SVM"
 author: "[redacted]"
 format: 
     revealjs:
-      theme: moon
-      embed-resources: true
+      theme: sakura.scss
+csl: american-chemical-society.csl
 bibliography: ../project_proposal.bib
 ---
 
@@ -12,17 +13,16 @@ bibliography: ../project_proposal.bib
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(colorspace)
+library(rlang)
+library(cowplot)
 
 read_tsv <- function(file, ...) {
   read_delim(file, ..., delim = "\t")
 }
 
-ggplot_my_theme = theme(
-  axis.text = element_text(size = 20),
-  axis.title = element_text(size = 20),
-  legend.text = element_text(size = 10),
-  legend.title = element_text(size = 15),
-)
+ggplot_my_theme = 
+  theme_half_open(font_size = 20) +
+  background_grid()
 ```
 
 ## Introduction
@@ -125,6 +125,8 @@ bind_rows(
   geom_line() + 
   coord_fixed() +
   labs(x = "FP%", y="TP%") +
+  scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
   ggplot_my_theme
 ```
 :::
@@ -132,102 +134,182 @@ bind_rows(
 
 ## Methodology {.smaller}
 
-### SVM - Non-linear Models
+### SVM - $c$-values & Non-linear Models 
 
 :::: {.columns}
-::: {.column width=60%}
-We used two non-linear SVM models:
 
+::: {.column width=50%}
+
+We need to tune the $c$ value for the SVM algorithm.
+
+- A low $c$ value allows for a wider margin but more misclassification.
+- A high $c$ value allows for a narrower margin but less misclassification.
+
+![Large c vs low c](https://i.stack.imgur.com/GbW5S.png)
+
+:::
+::: {.column width=50%}
+
+In additional to the linear kernel, we also tried two non-linear kernels:
+
+::: {.r-stack}
+
+::: {.fragment .fade-out}
 - The gaussian kernel:
   $$
   K(x, x') = \exp\left(-\frac{\|x - x'\|^2}{\epsilon}\right)
   $$
 
+  ```{r, fig.width=4, fig.height=3}
+  #| fig-cap: The Gaussian Kernel
+
+  expand.grid(
+    x = seq(-10, 10, by = 0.1),
+    eps = c(100, 200, 300, 400, 500)
+  ) %>%
+    mutate(y = exp(-x^2/eps)) %>%
+    ggplot() +
+    geom_line(aes(x = x, y = y, color = as.factor(eps)), size = 2) +
+    labs(x = NULL, y = NULL) +
+    ggplot_my_theme +
+    labs(color = "Epsilon")
+
+  ```
+
+:::
+
+::: {.fragment}
 - The polynomial kernel.
 
   $$
   K(x, x') = (<x, x'> + C)^d
   $$
+
+  ```{r, fig.width=4, fig.height=3}
+  #| fig-cap: The Polynomial Kernel
+
+  expand.grid(
+    x = seq(-10, 10, by = 0.1),
+    c = 5,
+    d = c(1, 2, 3, 4)
+  ) %>%
+    mutate(y = (x + c)^d) %>%
+    ggplot() +
+    geom_line(aes(x = x, y = y, color = as.factor(d)), size = 2) +
+    labs(x = "x", y = "K") +
+    ggplot_my_theme +
+    labs(color = "Degree", x = NULL, y = NULL)
+
+  ```
+:::
+:::
 :::
 
-::: {.column width=40%}
+::::
+
+## Methodology {.smaller}
+
+### Model and Hyperparameter Tuning (cont'd)
+
+```{mermaid}
+flowchart LR
+   boruta(Boruta Feature Selection) --> svm(SVM)
+   svm --> c_values(Choose C Values)
+   c_values --> linear_svm(Linear SVM)
+   c_values --> gaussian_svm(Gaussian SVM)
+   c_values --> polynomial_svm(Polynomial SVM)
+   gaussian_svm --> hyper_gaussian(Choose Epsilon)
+   polynomial_svm --> hyper_polynomial(Choose Degree and Constant)
+   linear_svm ---> model_evaluation(MCC)
+   hyper_gaussian --> model_evaluation
+   hyper_polynomial --> model_evaluation
+```
+
+
+```{r}
+mcc_breaks <- seq(-0.1, 0.5, by=0.05)
+```
+
+:::: {.columns}
+
+::: {.column width=25%}
 ```{r, fig.width=7, fig.height=7}
-#| fig-cap: MCC performance for different kernels
 svm_boruta_grid_opt <- read_csv("../svm_data/svm_grid_opt_boruta.csv") %>% 
   filter(!is.na(mcc))
 
 svm_boruta_grid_opt %>%
   ggplot(aes(x = kernel, y = mcc)) +
   geom_boxplot() +
+  labs(title = "SVM Overall Performance by Kernel",
+       x = "Kernel",
+       y = "MCC") +
   ggplot_my_theme
 ```
 :::
-::::
 
-::: {.notes}
-It seems that the gaussian kernel is the best choice for this dataset.
-:::
-
-## Methodology {.smaller}
-
-### SVM - Hyperparameter Tuning
-
-:::: {.columns}
-::: {.column width=60%}
-$$
-K(x, x') = \exp\left(-\frac{\|x - x'\|^2}{\epsilon}\right)
-$$
-
-In addition to the $\epsilon$ value for the gaussian kernel, we also need to tune the $c$ value for the SVM algorithm.
-
-- A low $c$ value allows for a wider margin but more misclassification.
-- A high $c$ value allows for a narrower margin but less misclassification.
-:::
-
-::: {.column width=40%}
-
-::: {.r-stack}
-
-::: {.fragment .fade-out}
+::: {.column width=25%}
 ```{r, fig.width=7, fig.height=7}
-#| fig-cap: The Gaussian Kernel
-
-expand.grid(
-  x = seq(-10, 10, by = 0.1),
-  eps = c(100, 200, 300, 400, 500)
-) %>%
-  mutate(y = exp(-x^2/eps)) %>%
-  ggplot() +
-  geom_line(aes(x = x, y = y, color = as.factor(eps)), size = 2) +
-  labs(x = "x", y = "K") +
-  ggplot_my_theme +
-  labs(color = "Epsilon")
-
-```
-:::
-
-::: {.fragment}
-```{r, fig.width=7, fig.height=7}
-#| fig-cap: MCC performance for different hyperparameters
-
 svm_boruta_grid_opt_gaussian <- read_csv("../svm_data/svm_grid_opt_boruta_gaussian.csv") %>% 
   filter(!is.na(mcc))
 
 svm_boruta_grid_opt_gaussian %>%
   filter(kernel == "gaussian") %>%
   filter(c_pos == c_neg) %>%
-  ggplot(aes(x=c_pos, y=gaussian_eps, color = mcc)) +
-  geom_point(size = 3) +
-  scale_x_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2)) +
-  scale_y_log10(limits=c(30,60)) +
+  ggplot(aes(x=c_pos, y=gaussian_eps, z = mcc)) +
+  geom_contour_filled(breaks = mcc_breaks) +
+  scale_x_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2), expand = c(0, 0)) +
+  scale_y_log10(limits=c(30,60), expand = c(0, 0)) +
+  scale_fill_discrete_sequential(palette = "Viridis", rev = FALSE, drop = FALSE) +
   ggplot_my_theme +
-  #scale_color_gradientn(colors = rainbow_hcl(10)) +
-  scale_color_continuous_sequential(palette = "Viridis", rev = FALSE) +
-  labs(x = "c Value", y = "Epsilon", color = "MCC")
+  labs( 
+    title = "Gaussian Kernel Hyperparameter Search",
+    x = "c Value",
+    y = "Epsilon",
+    z = "MCC")
 ```
 :::
+
+::: {.column width=25%}
+```{r, fig.width=7, fig.height=7}
+svm_boruta_grid_opt_linear <- read_csv("../svm_data/svm_grid_opt_boruta_linear.csv") %>% 
+  filter(!is.na(mcc))
+
+svm_boruta_grid_opt_linear %>%
+  filter(kernel == "linear") %>%
+  ggplot(aes(x=c_pos,y=c_neg, z = mcc)) +
+  geom_contour_filled(breaks = mcc_breaks) +
+  scale_x_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2), expand = c(0, 0)) +
+  scale_y_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2), expand = c(0, 0)) +
+  scale_fill_discrete_sequential(palette = "Viridis", rev = FALSE, drop = FALSE) +
+  ggplot_my_theme +
+  labs(
+    title = "Linear Kernel Hyperparameter Search",
+    x = "c Value (Positive)",
+    y = "c Value (Negative)",
+    z = "MCC")
+```
 :::
 
+::: {.column width=25%}
+```{r, fig.width=7, fig.height=7}
+svm_boruta_grid_opt_polynomial <- read_csv("../svm_data/svm_grid_opt_boruta_polynomial.csv") %>% 
+  filter(!is.na(mcc))
+
+svm_boruta_grid_opt_polynomial %>%
+  filter(kernel == "polynomial") %>%
+  ggplot(aes(x=c_pos,y=polynomial_c, z = mcc)) +
+  geom_contour_filled(breaks = mcc_breaks) +
+  scale_x_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2), expand = c(0, 0)) +
+  scale_y_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2), expand = c(0, 0)) +
+  scale_fill_discrete_sequential(palette = "Viridis", rev = FALSE, drop = FALSE) +
+  facet_wrap(~polynomial_degree) +
+  ggplot_my_theme +
+  labs(
+    title = "Polynomial Kernel Hyperparameter Search",
+    x = "c Value", 
+    y = "Polynomial constant", 
+    z = "MCC")
+```
 :::
 ::::
 
@@ -284,9 +366,10 @@ svm_boruta_grid_opt_gaussian_roc %>%
   ggplot(aes(x=x,y=y, color = mode)) +
   geom_line() + 
   coord_fixed() +
-  labs(x = "FP%", y="TP%") +
-  ggplot_my_theme +
-  labs(color = "Mode")
+  scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  labs(x = "FP%", y="TP%", color = "Mode") +
+  ggplot_my_theme
 ```
 :::
 :::
