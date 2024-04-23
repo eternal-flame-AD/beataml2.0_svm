@@ -449,7 +449,7 @@
 <ul>
 <li class="fragment">80/20 split for training and testing.</li>
 <li class="fragment">We care about all 4 quadrants of the confusion matrix!</li>
-<li class="fragment">Matthews Correlation Coefficient (MCC) as the primary metric to evaluate the performance of the SVM model.</li>
+<li class="fragment">Matthews Correlation Coefficient (MCC)<span class="citation" data-cites="chicco_matthews_2021"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">4</a></sup></span> as the primary metric to evaluate the performance of the SVM model.</li>
 <li class="fragment"><span class="math display">\[
 \text{MCC} = \frac{TP \times TN - FP \times FN}{\sqrt{(TP + FP)(TP + FN)(TN + FP)(TN + FN)}}
 \]</span></li>
@@ -549,7 +549,7 @@ K(x, x') = (&lt;x, x'&gt; + C)^d
 </section>
 <section id="methodology-5" class="slide level2 smaller">
 <h2>Methodology</h2>
-<h3 id="model-and-hyperparameter-tuning-contd-hsu_practical_nodate">Model and Hyperparameter Tuning (cont’d)<span class="citation" data-cites="hsu_practical_nodate"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">4</a></sup></span></h3>
+<h3 id="model-and-hyperparameter-tuning-contd-hsu_practical_nodate">Model and Hyperparameter Tuning (cont’d)<span class="citation" data-cites="hsu_practical_nodate"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">5</a></sup></span></h3>
 <div class="cell" data-reveal="true" data-layout-align="default">
 <div class="cell-output-display">
 <div>
@@ -594,8 +594,8 @@ K(x, x') = (&lt;x, x'&gt; + C)^d
 </div>
 </div>
 <ul>
-<li>TBKBP1, part of a growth factor signaling axis, already proposed by existing literature as potential tumor growth mediator.<span class="citation" data-cites="zhu_tbkbp1_2019"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">5</a></sup></span></li>
-<li>SLC16A1-AS1, multiple research shows it regulates cell cycle in oral squamous cell carcinoma<span class="citation" data-cites="feng_long_2020"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">6</a></sup></span>, clinical data suggest that it contributes to the progression of hepatocellular carcinoma.<span class="citation" data-cites="duan_lncrna_2022"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">7</a></sup></span></li>
+<li>TBKBP1, part of a growth factor signaling axis, already proposed by existing literature as potential tumor growth mediator.<span class="citation" data-cites="zhu_tbkbp1_2019"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">6</a></sup></span></li>
+<li>SLC16A1-AS1, multiple research shows it regulates cell cycle in oral squamous cell carcinoma<span class="citation" data-cites="feng_long_2020"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">7</a></sup></span>, clinical data suggest that it contributes to the progression of hepatocellular carcinoma.<span class="citation" data-cites="duan_lncrna_2022"><sup><a href="#/code-availability-license-references" role="doc-biblioref" onclick="">8</a></sup></span></li>
 <li>TG, a gene that encodes for thyroglobulin, a precursor of thyroid hormones.</li>
 </ul>
 </section>
@@ -644,17 +644,20 @@ K(x, x') = (&lt;x, x'&gt; + C)^d
 <div id="ref-kursa_feature_2010" class="csl-entry" role="listitem">
 <div class="csl-left-margin">(3) </div><div class="csl-right-inline">Kursa, M. B.; Rudnicki, W. R. Feature <span>Selection</span> with the <span>Boruta</span> <span>Package</span>. <em>Journal of Statistical Software</em> <strong>2010</strong>, <em>36</em>, 1–13. <a href="https://doi.org/10.18637/jss.v036.i11">https://doi.org/10.18637/jss.v036.i11</a>.</div>
 </div>
+<div id="ref-chicco_matthews_2021" class="csl-entry" role="listitem">
+<div class="csl-left-margin">(4) </div><div class="csl-right-inline">Chicco, D.; Tötsch, N.; Jurman, G. The <span>Matthews</span> Correlation Coefficient (<span>MCC</span>) Is More Reliable Than Balanced Accuracy, Bookmaker Informedness, and Markedness in Two-Class Confusion Matrix Evaluation. <em>BioData Mining</em> <strong>2021</strong>, <em>14</em> (1), 1–22. <a href="https://doi.org/10.1186/s13040-021-00244-z">https://doi.org/10.1186/s13040-021-00244-z</a>.</div>
+</div>
 <div id="ref-hsu_practical_nodate" class="csl-entry" role="listitem">
-<div class="csl-left-margin">(4) </div><div class="csl-right-inline">Hsu, C.-W.; Chang, C.-C.; Lin, C.-J. A <span>Practical</span> <span>Guide</span> to <span>Support</span> <span>Vector</span> <span>Classiﬁcation</span>.</div>
+<div class="csl-left-margin">(5) </div><div class="csl-right-inline">Hsu, C.-W.; Chang, C.-C.; Lin, C.-J. A <span>Practical</span> <span>Guide</span> to <span>Support</span> <span>Vector</span> <span>Classiﬁcation</span>.</div>
 </div>
 <div id="ref-zhu_tbkbp1_2019" class="csl-entry" role="listitem">
-<div class="csl-left-margin">(5) </div><div class="csl-right-inline">Zhu, L.; Li, Y.; Xie, X.; Zhou, X.; Gu, M.; Jie, Z.; Ko, C.-J.; Gao, T.; Hernandez, B. E.; Cheng, X.; Sun, S.-C. <span>TBKBP1</span> and <span>TBK1</span> Form a Growth Factor Signaling Axis Mediating Immunosuppression and Tumorigenesis. <em>Nature cell biology</em> <strong>2019</strong>, <em>21</em> (12), 1604–1614. <a href="https://doi.org/10.1038/s41556-019-0429-8">https://doi.org/10.1038/s41556-019-0429-8</a>.</div>
+<div class="csl-left-margin">(6) </div><div class="csl-right-inline">Zhu, L.; Li, Y.; Xie, X.; Zhou, X.; Gu, M.; Jie, Z.; Ko, C.-J.; Gao, T.; Hernandez, B. E.; Cheng, X.; Sun, S.-C. <span>TBKBP1</span> and <span>TBK1</span> Form a Growth Factor Signaling Axis Mediating Immunosuppression and Tumorigenesis. <em>Nature cell biology</em> <strong>2019</strong>, <em>21</em> (12), 1604–1614. <a href="https://doi.org/10.1038/s41556-019-0429-8">https://doi.org/10.1038/s41556-019-0429-8</a>.</div>
 </div>
 <div id="ref-feng_long_2020" class="csl-entry" role="listitem">
-<div class="csl-left-margin">(6) </div><div class="csl-right-inline">Feng, H.; Zhang, X.; Lai, W.; Wang, J. Long Non-Coding <span>RNA</span> <span>SLC16A1</span>-<span>AS1</span>: Its Multiple Tumorigenesis Features and Regulatory Role in Cell Cycle in Oral Squamous Cell Carcinoma. <em>Cell Cycle (Georgetown, Tex.)</em> <strong>2020</strong>, <em>19</em> (13), 1641–1653. <a href="https://doi.org/10.1080/15384101.2020.1762048">https://doi.org/10.1080/15384101.2020.1762048</a>.</div>
+<div class="csl-left-margin">(7) </div><div class="csl-right-inline">Feng, H.; Zhang, X.; Lai, W.; Wang, J. Long Non-Coding <span>RNA</span> <span>SLC16A1</span>-<span>AS1</span>: Its Multiple Tumorigenesis Features and Regulatory Role in Cell Cycle in Oral Squamous Cell Carcinoma. <em>Cell Cycle (Georgetown, Tex.)</em> <strong>2020</strong>, <em>19</em> (13), 1641–1653. <a href="https://doi.org/10.1080/15384101.2020.1762048">https://doi.org/10.1080/15384101.2020.1762048</a>.</div>
 </div>
 <div id="ref-duan_lncrna_2022" class="csl-entry" role="listitem">
-<div class="csl-left-margin">(7) </div><div class="csl-right-inline">Duan, C. <span>LncRNA</span> <span>SLC16A1</span>-<span>AS1</span> Contributes to the Progression of Hepatocellular Carcinoma Cells by Modulating <span class="nocase">miR</span>-411/<span>MITD1</span> Axis. <em>Journal of Clinical Laboratory Analysis</em> <strong>2022</strong>, <em>36</em> (4), e24344. <a href="https://doi.org/10.1002/jcla.24344">https://doi.org/10.1002/jcla.24344</a>.</div>
+<div class="csl-left-margin">(8) </div><div class="csl-right-inline">Duan, C. <span>LncRNA</span> <span>SLC16A1</span>-<span>AS1</span> Contributes to the Progression of Hepatocellular Carcinoma Cells by Modulating <span class="nocase">miR</span>-411/<span>MITD1</span> Axis. <em>Journal of Clinical Laboratory Analysis</em> <strong>2022</strong>, <em>36</em> (4), e24344. <a href="https://doi.org/10.1002/jcla.24344">https://doi.org/10.1002/jcla.24344</a>.</div>
 </div>
 </div>
 <div class="quarto-auto-generated-content">

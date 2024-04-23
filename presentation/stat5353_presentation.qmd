@@ -84,7 +84,7 @@ print(svm_input_subset)
 ::: {.incremental}
 - 80/20 split for training and testing.
 - We care about all 4 quadrants of the confusion matrix!
-- Matthews Correlation Coefficient (MCC) as the primary metric to evaluate the performance of the SVM model.
+- Matthews Correlation Coefficient (MCC) [@chicco_matthews_2021] as the primary metric to evaluate the performance of the SVM model.
 - $$
   \text{MCC} = \frac{TP \times TN - FP \times FN}{\sqrt{(TP + FP)(TP + FN)(TN + FP)(TN + FN)}}
   $$
