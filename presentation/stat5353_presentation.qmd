@@ -13,7 +13,6 @@ bibliography: ../project_proposal.bib
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(colorspace)
-library(rlang)
 library(cowplot)
 
 read_tsv <- function(file, ...) {
@@ -232,22 +231,7 @@ mcc_breaks <- seq(-0.1, 0.5, by=0.05)
 
 :::: {.columns}
 
-::: {.column width=25%}
-```{r, fig.width=7, fig.height=7}
-svm_boruta_grid_opt <- read_csv("../svm_data/svm_grid_opt_boruta.csv") %>% 
-  filter(!is.na(mcc))
-
-svm_boruta_grid_opt %>%
-  ggplot(aes(x = kernel, y = mcc)) +
-  geom_boxplot() +
-  labs(title = "SVM Overall Performance by Kernel",
-       x = "Kernel",
-       y = "MCC") +
-  ggplot_my_theme
-```
-:::
-
-::: {.column width=25%}
+::: {.column width=30%}
 ```{r, fig.width=7, fig.height=7}
 svm_boruta_grid_opt_gaussian <- read_csv("../svm_data/svm_grid_opt_boruta_gaussian.csv") %>% 
   filter(!is.na(mcc))
@@ -255,6 +239,7 @@ svm_boruta_grid_opt_gaussian <- read_csv("../svm_data/svm_grid_opt_boruta_gaussi
 svm_boruta_grid_opt_gaussian %>%
   filter(kernel == "gaussian") %>%
   filter(c_pos == c_neg) %>%
+  filter(c_pos <= 2^5 & c_neg <= 2^5) %>%
   ggplot(aes(x=c_pos, y=gaussian_eps, z = mcc)) +
   geom_contour_filled(breaks = mcc_breaks) +
   scale_x_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2), expand = c(0, 0)) +
@@ -265,17 +250,18 @@ svm_boruta_grid_opt_gaussian %>%
     title = "Gaussian Kernel Hyperparameter Search",
     x = "c Value",
     y = "Epsilon",
-    z = "MCC")
+    fill = "MCC")
 ```
 :::
 
-::: {.column width=25%}
+::: {.column width=30%}
 ```{r, fig.width=7, fig.height=7}
 svm_boruta_grid_opt_linear <- read_csv("../svm_data/svm_grid_opt_boruta_linear.csv") %>% 
   filter(!is.na(mcc))
 
 svm_boruta_grid_opt_linear %>%
   filter(kernel == "linear") %>%
+  filter(c_pos <= 2^5 & c_neg <= 2^5) %>%
   ggplot(aes(x=c_pos,y=c_neg, z = mcc)) +
   geom_contour_filled(breaks = mcc_breaks) +
   scale_x_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2), expand = c(0, 0)) +
@@ -286,17 +272,18 @@ svm_boruta_grid_opt_linear %>%
     title = "Linear Kernel Hyperparameter Search",
     x = "c Value (Positive)",
     y = "c Value (Negative)",
-    z = "MCC")
+    fill = "MCC")
 ```
 :::
 
-::: {.column width=25%}
-```{r, fig.width=7, fig.height=7}
+::: {.column width=30%}
+```{r, fig.width=7.5, fig.height=7}
 svm_boruta_grid_opt_polynomial <- read_csv("../svm_data/svm_grid_opt_boruta_polynomial.csv") %>% 
   filter(!is.na(mcc))
 
 svm_boruta_grid_opt_polynomial %>%
   filter(kernel == "polynomial") %>%
+  filter(c_pos <= 2^5 & c_neg <= 2^5) %>%
   ggplot(aes(x=c_pos,y=polynomial_c, z = mcc)) +
   geom_contour_filled(breaks = mcc_breaks) +
   scale_x_continuous(trans = scales::transform_log2(), labels = scales::label_log(base = 2), expand = c(0, 0)) +
@@ -308,7 +295,7 @@ svm_boruta_grid_opt_polynomial %>%
     title = "Polynomial Kernel Hyperparameter Search",
     x = "c Value", 
     y = "Polynomial constant", 
-    z = "MCC")
+    fill = "MCC")
 ```
 :::
 ::::
