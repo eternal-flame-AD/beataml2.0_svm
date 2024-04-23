@@ -20,8 +20,8 @@ read_tsv <- function(file, ...) {
 }
 
 ggplot_my_theme = 
-  theme_half_open(font_size = 20) +
-  background_grid()
+  theme_half_open(font_size = 22)
+  background_grid() 
 ```
 
 ## Introduction
@@ -208,7 +208,7 @@ In additional to the linear kernel, we also tried two non-linear kernels:
 
 ## Methodology {.smaller}
 
-### Model and Hyperparameter Tuning (cont'd)
+### Model and Hyperparameter Tuning (cont'd) [@hsu_practical_nodate]
 
 ```{mermaid}
 flowchart LR
@@ -225,18 +225,14 @@ flowchart LR
 ```
 
 
-```{r}
+```{r, fig.width=24, fig.height=7}
+
 mcc_breaks <- seq(-0.1, 0.5, by=0.05)
-```
 
-:::: {.columns}
-
-::: {.column width=30%}
-```{r, fig.width=7, fig.height=7}
 svm_boruta_grid_opt_gaussian <- read_csv("../svm_data/svm_grid_opt_boruta_gaussian.csv") %>% 
   filter(!is.na(mcc))
 
-svm_boruta_grid_opt_gaussian %>%
+p_gaussian <- svm_boruta_grid_opt_gaussian %>%
   filter(kernel == "gaussian") %>%
   filter(c_pos == c_neg) %>%
   filter(c_pos <= 2^5 & c_neg <= 2^5) %>%
@@ -247,19 +243,16 @@ svm_boruta_grid_opt_gaussian %>%
   scale_fill_discrete_sequential(palette = "Viridis", rev = FALSE, drop = FALSE) +
   ggplot_my_theme +
   labs( 
-    title = "Gaussian Kernel Hyperparameter Search",
+    title = "Gaussian Kernel Hyperparameters",
     x = "c Value",
     y = "Epsilon",
     fill = "MCC")
-```
-:::
 
-::: {.column width=30%}
-```{r, fig.width=7, fig.height=7}
+
 svm_boruta_grid_opt_linear <- read_csv("../svm_data/svm_grid_opt_boruta_linear.csv") %>% 
   filter(!is.na(mcc))
 
-svm_boruta_grid_opt_linear %>%
+p_linear <- svm_boruta_grid_opt_linear %>%
   filter(kernel == "linear") %>%
   filter(c_pos <= 2^5 & c_neg <= 2^5) %>%
   ggplot(aes(x=c_pos,y=c_neg, z = mcc)) +
@@ -269,19 +262,16 @@ svm_boruta_grid_opt_linear %>%
   scale_fill_discrete_sequential(palette = "Viridis", rev = FALSE, drop = FALSE) +
   ggplot_my_theme +
   labs(
-    title = "Linear Kernel Hyperparameter Search",
+    title = "Linear Kernel Hyperparameters",
     x = "c Value (Positive)",
     y = "c Value (Negative)",
     fill = "MCC")
-```
-:::
 
-::: {.column width=30%}
-```{r, fig.width=7.5, fig.height=7}
+
 svm_boruta_grid_opt_polynomial <- read_csv("../svm_data/svm_grid_opt_boruta_polynomial.csv") %>% 
   filter(!is.na(mcc))
 
-svm_boruta_grid_opt_polynomial %>%
+p_polynomial <- svm_boruta_grid_opt_polynomial %>%
   filter(kernel == "polynomial") %>%
   filter(c_pos <= 2^5 & c_neg <= 2^5) %>%
   ggplot(aes(x=c_pos,y=polynomial_c, z = mcc)) +
@@ -292,13 +282,19 @@ svm_boruta_grid_opt_polynomial %>%
   facet_wrap(~polynomial_degree) +
   ggplot_my_theme +
   labs(
-    title = "Polynomial Kernel Hyperparameter Search",
+    title = "Polynomial Kernel Hyperparameters",
+    caption = "Panel shows degree of polynomial kernel.",
     x = "c Value", 
     y = "Polynomial constant", 
     fill = "MCC")
+
+plot_grid(
+  p_linear + theme(legend.position = "none"),
+  p_gaussian + theme(legend.position = "none"),
+  p_polynomial, 
+  rel_widths = c(0.8, 0.8, 1),
+  nrow = 1)
 ```
-:::
-::::
 
 ## Results {.smaller}
 
