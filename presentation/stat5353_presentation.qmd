@@ -20,7 +20,7 @@ read_tsv <- function(file, ...) {
 }
 
 ggplot_my_theme = 
-  theme_half_open(font_size = 22)
+  theme_half_open(font_size = 22) +
   background_grid() 
 ```
 
@@ -39,11 +39,11 @@ ggplot_my_theme =
 
 As part of the Beat AML 2.0 program, a dataset consisting of clinical outcomes, genomic and transcriptomic data from a cohort of 805 AML patients were collected. [@bottomly_integrative_2022]
 
-Among which 571 patients have both RNASeq data and either survived for at least one year after diagnosis (n = 311) or have died (n = 260). We propose a methodology to predict the one-year survival of AML patients using a support vector machine (SVM) model based on transcriptomic (RNASeq) data of these patients.
+Among which 571 patients have both RNASeq data (63677 features) and either survived for at least one year after diagnosis (n = 311) or have died (n = 260). We propose a statistical pipeline to predict the one-year survival of AML patients using a support vector machine (SVM) model based on transcriptomic (RNASeq) data of these patients.
 
 
 ::: {.notes}
-Mention that we have more then 50k gene features in this data set.
+
 :::
 
 
@@ -74,7 +74,7 @@ print(svm_input_subset)
   - If a feature scored a higher Z-score than the shadow features, it is considered important.
   - If a feature repeatedly scored similar to the shadow features, it is considered unimportant and removed from further iterations.
   - The algorithm iteratively removes the unimportant features until all features are either important or unimportant.
-- We ran the Boruta algorithm for 1000 iterations and reduced 51016 => 60 important features.
+- We ran the Boruta algorithm for 1000 iterations and reduced 63677 => 60 important features.
 :::
 
 ## Methodology {.smaller}
@@ -121,12 +121,13 @@ bind_rows(
       mutate(`Feature Selection` = TRUE)
     ) %>%
   ggplot(aes(x=x,y=y, color=`Feature Selection`)) +
-  geom_line() + 
+  geom_line(linewidth = 2) +
   coord_fixed() +
   labs(x = "FP%", y="TP%") +
   scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
-  ggplot_my_theme
+  ggplot_my_theme +
+  theme(legend.position = "bottom")
 ```
 :::
 ::::
@@ -328,7 +329,7 @@ svm_importance_boruta %>%
 ::: {.incremental}
 - We still can do something to improve the model (in terms of increasing the prediction power).
 - We have limited number of samples, so we can conserve them by using a 10-fold cross-validation instead of the 80/20 split we've been using.
-- A predictor that has seen the input has 10% vote in this!
+- K-fold is also more robust than the 80/20 split by evaluating the model on different subsets of the data.
 :::
 :::
 
@@ -338,26 +339,36 @@ svm_importance_boruta %>%
 ```{r, fig.width=7, fig.height=7}
 #| fig-cap: ROC curve of the final model
 
-svm_boruta_grid_opt_gaussian_roc <- read_csv("../svm_data/svm_grid_opt_boruta_gaussian_roc.csv")
-svm_kfold_boruta_roc <- read_csv("../svm_data/svm_kfold_boruta_roc.csv")
+svm_boruta_grid_opt_gaussian_roc <- read_csv("../svm_data/svm_grid_opt_boruta_gaussian_roc.csv") %>%
+  mutate(mode = "Train/Test Split", k = -1)
+svm_kfold_boruta_roc <- read_csv("../svm_data/svm_kfold_boruta_roc.csv") %>%
+  mutate(mode = "K-Fold")
 
 svm_boruta_grid_opt_gaussian_roc %>%
   filter(c_pos == 1 & c_neg == 1 & gaussian_eps == 47) %>%
   select(x, y) %>%
   mutate(mode = "Train/Test Split") %>%
   bind_rows(svm_kfold_boruta_roc %>% mutate(mode = "K-Fold")) %>%
-  ggplot(aes(x=x,y=y, color = mode)) +
-  geom_line() + 
+  ggplot(aes(x=x,y=y, color = mode, group = k)) +
+  geom_line(linewidth = 2) +
   coord_fixed() +
   scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
   labs(x = "FP%", y="TP%", color = "Mode") +
-  ggplot_my_theme
+  ggplot_my_theme +
+  theme(legend.position = "bottom")
 ```
 :::
 :::
 ::::
 
+## Discussion
+
+::: {.incremental}
+- RNASeq data are moderately predictive of one-year survival in AML patients.
+- The Boruta algorithm is effective in selecting important features.
+- Hyperparameter tuning is crucial for the performance of the SVM model.
+:::
 
 ## Code Availability, License & References
 

@@ -2,6 +2,7 @@ use std::{fs::OpenOptions, path::Path, sync::Mutex};
 
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle};
+use linfa::prelude::*;
 use linfa::Dataset;
 use log::info;
 use rand::prelude::*;
@@ -9,7 +10,7 @@ use rayon::prelude::*;
 
 use ndarray::Array;
 use stat5353_project::{
-    kfold, pivot_data,
+    kfold, pivot_data, roc,
     svm::{svm_hyper_params_grid, CombinedSVM, SvmHyperParams},
 };
 
@@ -535,6 +536,35 @@ fn svm_kfold(args: SvmKFoldArgs) {
         },
     };
 
+    let csv_file = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(args.output)
+        .unwrap();
+
+    let mut csv_writer = csv::WriterBuilder::new()
+        .delimiter(args.delim as u8)
+        .from_writer(csv_file);
+
+    csv_writer
+        .write_record(&["k", "accuracy", "precision", "recall", "mcc", "f1"])
+        .unwrap();
+
+    let csv_writer = Mutex::new(csv_writer);
+
+    let roc_output = args.roc_output.map(|s| {
+        let file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(s)
+            .unwrap();
+        let mut f = csv::WriterBuilder::new().from_writer(file);
+        f.write_record(&["k", "x", "y"]).unwrap();
+        Mutex::new(f)
+    });
+
     let joined_ds = records.iter().zip(targets.iter()).collect::<Vec<_>>();
     let folds = kfold(&joined_ds, args.folds)
         .into_iter()
@@ -549,85 +579,76 @@ fn svm_kfold(args: SvmKFoldArgs) {
 
     let models = folds
         .iter()
-        .map(|(train_pred, train_target, _, _)| {
-            let dataset = Dataset::new(
-                Array::from_shape_vec(
-                    (train_pred.len(), train_pred[0].len()),
-                    train_pred
-                        .iter()
-                        .map(|x| x.iter())
-                        .flatten()
-                        .cloned()
-                        .collect::<Vec<f64>>(),
-                )
-                .unwrap(),
-                Array::from(train_target.iter().map(|x| **x).collect::<Vec<bool>>()),
-            );
+        .zip(0..args.folds)
+        .map(
+            |((train_pred, train_target, valid_pred, valid_target), k)| {
+                let train_dataset = Dataset::new(
+                    Array::from_shape_vec(
+                        (train_pred.len(), train_pred[0].len()),
+                        train_pred
+                            .iter()
+                            .map(|x| x.iter())
+                            .flatten()
+                            .cloned()
+                            .collect::<Vec<f64>>(),
+                    )
+                    .unwrap(),
+                    Array::from(train_target.iter().map(|x| **x).collect::<Vec<bool>>()),
+                );
 
-            let (model, _, _) = stat5353_project::svm::model_svm(dataset, 1.0, &params).unwrap();
+                let valid_dataset = Dataset::new(
+                    Array::from_shape_vec(
+                        (valid_pred.len(), valid_pred[0].len()),
+                        valid_pred
+                            .iter()
+                            .map(|x| x.iter())
+                            .flatten()
+                            .cloned()
+                            .collect::<Vec<f64>>(),
+                    )
+                    .unwrap(),
+                    Array::from(valid_target.iter().map(|x| **x).collect::<Vec<bool>>()),
+                );
 
-            model
-        })
+                let (model, _, _) =
+                    stat5353_project::svm::model_svm(train_dataset, 1.0, &params).unwrap();
+
+                let test_predictions = model.predict(valid_dataset.records());
+                let test_predictions_float = test_predictions.map(|x| **x);
+                let test_targets = valid_dataset.targets().as_slice().unwrap();
+                let test_prediction_bin = test_predictions.map(|x| x > &Pr::new(0.5));
+                {
+                    let confusion = test_prediction_bin
+                        .confusion_matrix(&valid_dataset)
+                        .unwrap();
+                    let mut csv_writer = csv_writer.lock().unwrap();
+                    csv_writer
+                        .write_record(&[
+                            &k.to_string(),
+                            &confusion.accuracy().to_string(),
+                            &confusion.precision().to_string(),
+                            &confusion.recall().to_string(),
+                            &confusion.mcc().to_string(),
+                            &confusion.f1_score().to_string(),
+                        ])
+                        .unwrap();
+                }
+
+                if let Some(roc_output) = &roc_output {
+                    let mut roc_output = roc_output.lock().unwrap();
+                    let roc = roc(&test_predictions_float.to_vec(), test_targets);
+                    for (x, y) in roc.0 {
+                        roc_output
+                            .write_record(&[&k.to_string(), &x.to_string(), &y.to_string()])
+                            .unwrap();
+                    }
+                }
+
+                model
+            },
+        )
         .collect::<Vec<_>>();
     let models = CombinedSVM::new(models);
-
-    let dataset = Dataset::new(
-        Array::from_shape_vec(
-            (records.len(), records[0].len()),
-            records.iter().flatten().cloned().collect::<Vec<f64>>(),
-        )
-        .unwrap(),
-        Array::from(targets),
-    );
-
-    let roc = models.roc_curve(&dataset);
-    let cm = models.confusion_matrix(&dataset);
-
-    let roc_output = args.roc_output.map(|s| {
-        let file = OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .open(s)
-            .unwrap();
-        let mut f = csv::WriterBuilder::new().from_writer(file);
-        f.write_record(&["x", "y"]).unwrap();
-        Mutex::new(f)
-    });
-
-    if let Some(roc_output) = &roc_output {
-        let mut roc_output = roc_output.lock().unwrap();
-        for (x, y) in roc.0 {
-            roc_output
-                .write_record(&[&x.to_string(), &y.to_string()])
-                .unwrap();
-        }
-    }
-
-    let csv_file = OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(args.output)
-        .unwrap();
-
-    let mut csv_writer = csv::WriterBuilder::new()
-        .delimiter(args.delim as u8)
-        .from_writer(csv_file);
-
-    csv_writer
-        .write_record(&["accuracy", "precision", "recall", "mcc", "f1"])
-        .unwrap();
-
-    csv_writer
-        .write_record(&[
-            cm.accuracy().to_string(),
-            cm.precision().to_string(),
-            cm.recall().to_string(),
-            cm.mcc().to_string(),
-            cm.f1_score().to_string(),
-        ])
-        .unwrap();
 }
 
 fn main() {
